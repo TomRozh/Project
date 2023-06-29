@@ -1,9 +1,17 @@
 from PyQt6 import QtCore, QtGui, QtWidgets
 from serial_port.serial_portPY import scanAvaiableSerialPorts
+from serial_port.serial_portPY import SerialPort
+import serial_port.serial_portPY
+import fpy_vin.fpyVIN as fpyVIN
 
 
 
 class Ui_Dialog(object):
+    portSelectid = ""
+    frequency = 0
+    baudrate = 0
+    console_text = ""
+
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
         Dialog.resize(802, 602)
@@ -16,13 +24,7 @@ class Ui_Dialog(object):
         self.comboBox_2.setGeometry(QtCore.QRect(19, 8, 641, 23))
         for i in range(0, len(port)): #Добавляем слоты для Devices
             self.comboBox_2.addItem("")
-        '''
-        self.lineEdit = QtWidgets.QLineEdit(parent=Dialog)
-        self.lineEdit.setGeometry(QtCore.QRect(19, 8, 641, 23))
-        self.lineEdit.setReadOnly(True)
-        self.lineEdit.setObjectName("lineEdit")
-        self.lineEdit.setText(port[0]) #------------------
-        '''
+        Ui_Dialog.portSelectid = port[0]
 
         self.pushButton = QtWidgets.QPushButton(parent=Dialog)
         self.pushButton.setGeometry(QtCore.QRect(666, 4, 121, 32))
@@ -30,6 +32,8 @@ class Ui_Dialog(object):
         self.textEdit = QtWidgets.QTextEdit(parent=Dialog)
         self.textEdit.setGeometry(QtCore.QRect(20, 40, 401, 511))
         self.textEdit.setObjectName("textEdit")
+        self.textEdit.setReadOnly(True)
+
         self.lineEdit_2 = QtWidgets.QLineEdit(parent=Dialog)
         self.lineEdit_2.setGeometry(QtCore.QRect(615, 40, 166, 21))
         self.lineEdit_2.setInputMethodHints(QtCore.Qt.InputMethodHint.ImhNone)
@@ -59,8 +63,53 @@ class Ui_Dialog(object):
         self.retranslateUi(Dialog)
         Dialog.accepted.connect(self.comboBox.clearEditText) # type: ignore
         Dialog.accepted.connect(self.comboBox_2.clearEditText)
-        #self.lineEdit.editingFinished.connect(self.comboBox.clearEditText) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(Dialog)
+
+        self.comboBox_2.currentTextChanged.connect(self.change_port_button)
+
+    def change_port_button(self):
+        SerialPort.close(serial_port.serial_portPY.SerialPort)
+        self.pushButton.setEnabled(True)
+        self.pushButton.setStyleSheet("background-color: #1E90FF; color: white;border-radius:5px;margin-top:5px")
+        self.pushButton.setMaximumHeight(25)
+        Ui_Dialog.portSelectid = ""
+        Ui_Dialog.frequency = self.lineEdit_2.text()
+        Ui_Dialog.console_text = ""
+        self.textEdit.setText(Ui_Dialog.console_text)
+        print(Ui_Dialog.portSelectid)
+
+
+    def the_button_connect_was_clicked(self):
+        Ui_Dialog.console_text = ""
+        Ui_Dialog.portSelectid = self.comboBox_2.currentText()
+        Ui_Dialog.frequency = self.lineEdit_2.text()
+        Ui_Dialog.baudrate = int(self.comboBox.currentText())
+        SerialPort.set_baudrate(SerialPort, Ui_Dialog.baudrate)
+        serial_port.serial_portPY.SerialPort.port = Ui_Dialog.portSelectid
+        if SerialPort.open(serial_port.serial_portPY.SerialPort) == True:
+            Ui_Dialog.console_text += 'Успешно' + '\n'
+            Ui_Dialog.console_text += self.comboBox_2.currentText() + '\n' + 'Частота: ' + self.lineEdit_2.text() + '\n' + 'Скорость передачи данных: ' + self.comboBox.currentText() + '\n' + '\n'
+            self.pushButton.setEnabled(False)
+            self.pushButton.setStyleSheet("background-color: #262626; color: white;border-radius:5px;margin-top:5px")
+            self.pushButton.setMaximumHeight(25)
+        else:
+            Ui_Dialog.console_text += 'Ошибка' + '\n'
+            self.pushButton.setEnabled(True)
+            self.pushButton.setStyleSheet("background-color: #1E90FF; color: white;border-radius:5px;margin-top:5px")
+            self.pushButton.setMaximumHeight(25)
+        self.textEdit.setText(Ui_Dialog.console_text)
+
+
+    def the_button_save_was_clicked(self):
+        Ui_Dialog.frequency = self.lineEdit_2.text()
+        Ui_Dialog.baudrate = int(self.comboBox.currentText())
+        Ui_Dialog.console_text += self.comboBox_2.currentText()+'\n'+'Частота: '+self.lineEdit_2.text()+'\n'+'Скорость передачи данных: '+self.comboBox.currentText()+'\n'+'\n'
+        self.textEdit.setText(Ui_Dialog.console_text)
+
+    def the_button_telemetria_clicked(self):
+        fpyVIN.VINMachine.serial_port = Ui_Dialog.portSelectid
+        Ui_Dialog.console_text += fpyVIN.VINMachine.command_a(fpyVIN.VINMachine, "0x00", fpyVIN.VINMachine.test_cmd)
+        self.textEdit.setText(Ui_Dialog.console_text)
 
     def retranslateUi(self, Dialog):
         port = scanAvaiableSerialPorts()
@@ -76,10 +125,17 @@ class Ui_Dialog(object):
         self.comboBox.setItemText(4, _translate("Dialog", "9600"))
         self.comboBox.setItemText(5, _translate("Dialog", "4800"))
 
+
+        self.pushButton.clicked.connect(self.the_button_connect_was_clicked)
+        self.pushButton_2.clicked.connect(self.the_button_telemetria_clicked)
+        self.pushButton_3.clicked.connect(self.the_button_save_was_clicked)
+
+
         for i in range(0, len(port)):
             self.comboBox_2.setItemText(i, _translate("Dialog", port[i]))
 
         self.pushButton_2.setText(_translate("Dialog", "Запросить телеметрию"))
         self.pushButton_3.setText(_translate("Dialog", "Сохранить"))
+
 
 
